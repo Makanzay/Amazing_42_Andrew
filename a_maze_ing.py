@@ -33,9 +33,12 @@ def main() -> None:
         width=config.width,
         height=config.height,
         seed=config.seed)
+    generator.add_42_pattern()
     
     if config.algorithm == "dfs":
         generator.generate_dfs()
+        if not generator.validate_maze():
+            raise ValueError("Generated maze has inconsistent walls")
     else:
         raise ValueError(f"Unsupported algo: {config.algorithm}")
 

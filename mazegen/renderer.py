@@ -21,7 +21,9 @@ def render_ascii(
 
             middle_line += "|" if cell.west else " "
 
-            if (cell.x, cell.y) == entry:
+            if cell.blocked:
+                middle_line += " # "
+            elif (cell.x, cell.y) == entry:
                 middle_line += " S "
             elif (cell.x, cell.y) == exit_:
                 middle_line += " E "

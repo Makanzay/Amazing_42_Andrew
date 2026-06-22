@@ -1,5 +1,14 @@
 from .cell import Cell
 import random
+import sys
+
+PATTERN_42 = [
+    "#   #  ### ",
+    "#   # #   #",
+    "#####    # ",
+    "    #   #  ",
+    "    # #####",
+]
 
 
 class MazeGenerator:
@@ -97,5 +106,65 @@ class MazeGenerator:
                 stack.append(neighbour)
             else:
                 stack.pop()
-    
-    def validate_maze
+
+    def validate_maze(self) -> bool:
+        """Check wall consistency between neighbour cells."""
+        for y in range(self.height):
+            for x in range(self.width):
+                cell = self.get_cell(x, y)
+
+                if x < self.width - 1:
+                    east_neighbour = self.get_cell(x + 1, y)
+
+                    if cell.east != east_neighbour.west:
+                        return False
+
+                if y < self.height - 1:
+                    south_neighbour = self.get_cell(x, y + 1)
+
+                    if cell.south != south_neighbour.north:
+                        return False
+
+        return True
+
+    def block_cells(self, positions: set[tuple[int, int]]) -> None:
+        """Mark given cells as blocked and fully closed."""
+        for x, y in positions:
+            cell = self.get_cell(x, y)
+            cell.blocked = True
+            cell.north = True
+            cell.east = True
+            cell.south = True
+            cell.west = True
+            cell.visited = True
+
+    def add_test_block(self) -> None:
+        """Add a small blocked pattern for testing."""
+        self.block_cells({
+            (1, 1),
+            (2, 1),
+            (1, 2),
+        })
+
+    def add_42_pattern(self) -> None:
+        """Add the 42 pattern in the maze"""
+        pattern_height = len(PATTERN_42)
+        pattern_width = len(PATTERN_42[0])
+
+        if self.width < pattern_width + 2 or self.height < pattern_height + 2:
+            print("Maze too small to display the 42 pattern.", file=sys.stderr)
+            return
+
+        start_x = (self.width - pattern_width) // 2
+        start_y = (self.height - pattern_height) // 2
+
+        positions_a_bloquer: set[tuple[int, int]] = set()
+
+        for dy, ligne in enumerate(PATTERN_42):
+            for dx, caractere in enumerate(ligne):
+                if caractere == "#":
+                    abs_x = start_x + dx
+                    abs_y = start_y + dy
+                    positions_a_bloquer.add((abs_x, abs_y))
+
+        self.block_cells(positions_a_bloquer)

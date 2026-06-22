@@ -16,13 +16,13 @@ def get_open_neighbours(
     x = cell.x
     y = cell.y
 
-    if not cell.north and y > 0:
+    if not cell.north and y > 0 and not grid[y - 1][x].blocked:
         neighbours.append((grid[y - 1][x], "N"))
-    if not cell.east and x < width - 1:
+    if not cell.east and x < width - 1 and not grid[y][x + 1].blocked:
         neighbours.append((grid[y][x + 1], "E"))
-    if not cell.south and y < height - 1:
+    if not cell.south and y < height - 1 and not grid[y + 1][x].blocked:
         neighbours.append((grid[y + 1][x], "S"))
-    if not cell.west and x > 0:
+    if not cell.west and x > 0 and not grid[y][x - 1].blocked:
         neighbours.append((grid[y][x - 1], "W"))
 
     return neighbours
@@ -38,6 +38,9 @@ def solve_shortest_path(
     the next one you add to the cell position the path to it"""
     start = grid[entry[1]][entry[0]]
     target = grid[exit_[1]][exit_[0]]
+
+    if start.blocked or target.blocked:
+        raise ValueError("Entry or exit cannot be inside the 42 pattern")
 
     queue: deque[tuple[Cell, str]] = deque()
     queue.append((start, ""))
