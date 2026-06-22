@@ -56,7 +56,7 @@ def main() -> None:
         path=path,
     )
 
-    print(render_ascii(generator.grid, config.entry, config.exit))
+    print(render_ascii(generator.grid, config.entry, config.exit, path))
 
 
 if __name__ == "__main__":

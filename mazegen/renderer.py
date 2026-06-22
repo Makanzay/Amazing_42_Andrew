@@ -3,13 +3,39 @@
 from .cell import Cell
 
 
+def path_to_positions(
+    entry: tuple[int, int],
+    path: str,
+) -> set[tuple[int, int]]:
+    """Convert a path string into maze coordinates"""
+    x, y = entry
+    positions: set[tuple[int, int]] = {(x, y)}
+
+    for move in path:
+        if move == "N":
+            y -= 1
+        elif move == "E":
+            x += 1
+        elif move == "S":
+            y += 1
+        elif move == "W":
+            x -= 1
+
+        positions.add((x, y))
+
+    return positions
+
+
 def render_ascii(
     grid: list[list[Cell]],
     entry: tuple[int, int],
     exit_: tuple[int, int],
+    path: str = "",
 ) -> str:
     """Return an ASCII representation of the maze."""
     lines: list[str] = []
+
+    path_positions = path_to_positions(entry, path) if path else set()
 
     for row in grid:
         top_line = ""
@@ -27,6 +53,8 @@ def render_ascii(
                 middle_line += " S "
             elif (cell.x, cell.y) == exit_:
                 middle_line += " E "
+            elif (cell.x, cell.y) in path_positions:
+                middle_line += " . "
             else:
                 middle_line += "   "
 
@@ -46,3 +74,6 @@ def render_ascii(
     lines.append(bottom_line)
 
     return "\n".join(lines)
+
+
+def render_mlx()
