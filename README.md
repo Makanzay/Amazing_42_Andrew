@@ -196,6 +196,12 @@ Esc    close the window
 
 The terminal renderer supports ANSI colours, clears and redraws the maze after
 each command, and can start with the path hidden by setting `SHOW_PATH=False`.
+Before each generation or regeneration, the program sends ANSI clear-screen
+codes (`\033[2J\033[3J\033[H`) so old mazes are removed from the visible
+terminal and from the scrollback when the terminal supports it. If the program
+is launched from an IDE output panel that does not interpret ANSI escape codes,
+old mazes may still appear; use a real terminal or the VS Code integrated
+terminal in that case.
 
 ## Output File
 

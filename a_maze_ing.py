@@ -30,6 +30,12 @@ class MazeRun:
     path: str
 
 
+def clear_terminal() -> None:
+    """Clear the terminal screen."""
+    sys.stdout.write("\033[2J\033[3J\033[H")
+    sys.stdout.flush()
+
+
 def make_progress_callback() -> Callable[[int, int, str], None]:
     """Build a stateful terminal progress callback."""
     last_percent = -1
@@ -65,6 +71,8 @@ def make_progress_callback() -> Callable[[int, int, str], None]:
 
 def build_maze(config: MazeConfig, seed_offset: int = 0) -> MazeRun:
     """Generate, validate, solve, and write one maze."""
+    clear_terminal()
+
     seed = config.seed
     if seed is not None:
         seed += seed_offset
@@ -125,7 +133,7 @@ def print_ascii_maze(
     """Print the current maze in ASCII mode."""
     visible_path = maze_run.path if show_path else ""
 
-    print("\033[2J\033[H", end="")
+    clear_terminal()
     print(render_ascii(
         maze_run.generator.grid,
         config.entry,
@@ -150,7 +158,7 @@ def run_ascii(config: MazeConfig, maze_run: MazeRun) -> None:
         try:
             command = input("> ").strip().lower()
         except EOFError:
-            print()
+            print("User run an CTRl + D ")
             return
 
         if command == "q":
