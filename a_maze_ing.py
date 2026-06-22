@@ -1,25 +1,37 @@
-#! usr/bin/python3
+#! /usr/bin/python3
+try:
+    import sys
 
-from mazegen.cell import Cell
-from mazegen.generator import MazeGenerator
-from mazegen.writer import write_maze_file
+    from mazegen.generator import MazeGenerator
+    from mazegen.writer import write_maze_file
+    from mazegen.solver import solve_shortest_path
 
-
-__all__ = [Cell, MazeGenerator, write_maze_file]
+except (ImportError, KeyboardInterrupt, Exception) as e:
+    print(f"Import Error : {e}")
 
 
 def main() -> None:
-    """first test"""
-    gen_maze: MazeGenerator = MazeGenerator(5, 4, seed=42)
-    gen_maze.generate_dfs()
+    generator = MazeGenerator(4, 4, seed=42)
+    generator.generate_dfs()
+
+    path = solve_shortest_path(
+        generator.grid,
+        entry=(0, 0),
+        exit_=(3, 3),
+    )
+
     write_maze_file(
-        grid=gen_maze.grid,
+        grid=generator.grid,
         output_file="maze.txt",
         entry=(0, 0),
         exit_=(3, 3),
-        path="Temporaire"
+        path=path,
     )
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error : {e}", file=sys.stderr)
+        sys.exit(1)
