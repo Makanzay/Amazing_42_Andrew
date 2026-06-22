@@ -1,11 +1,14 @@
 from .cell import Cell
+import random
 
 
 class MazeGenerator:
     """Generator of Maze by checking each cell"""
-    def __init__(self, width: int, height: int) -> None:
+    def __init__(self, width: int, height: int,
+                 seed: int | None = None) -> None:
         self.width = width
         self.height = height
+        self.random = random.Random(seed)
         self.grid: list[list[Cell]] = self._create_grid(width, height)
 
     def _create_grid(self, width: int, height: int) -> list[list[Cell]]:
@@ -63,3 +66,31 @@ class MazeGenerator:
             neighbours.append(self.get_cell(x - 1, y))
 
         return neighbours
+
+    def get_unvisited_neighbours(self, cell: Cell) -> list[Cell]:
+        """Neighbours that have not been visited yet."""
+        return [
+            neighbour
+            for neighbour in self.get_neighbours(cell)
+            if not neighbour.visited
+        ]
+
+    def generate_dfs(self) -> None:
+        """Generate a perfect maze using iterative dfs backtracking
+        allow use to avoid recursive error on wide maze"""
+        start = self.get_cell(0, 0)
+        start.visited = True
+
+        stack: list[Cell] = [start]
+
+        while stack:
+            current = stack[-1]
+            unvisited = self.get_unvisited_neighbours(current)
+
+            if unvisited:
+                neighbour = self.random.choice(unvisited)
+                self.remove_wall(current, neighbour)
+                neighbour.visited = True
+                stack.append(neighbour)
+            else:
+                stack.pop()
