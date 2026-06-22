@@ -34,7 +34,7 @@ def solve_shortest_path(
     exit_: tuple[int, int],
 ) -> str:
     """Return the shortest path from entry to exit using BFS
-    each path are stored with the cell ,so each time you go to 
+    each path are stored with the cell ,so each time you go to
     the next one you add to the cell position the path to it"""
     start = grid[entry[1]][entry[0]]
     target = grid[exit_[1]][exit_[0]]

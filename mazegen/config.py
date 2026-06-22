@@ -1,14 +1,10 @@
 """Parsing and data verification for the Config file"""
-try:
-    from pathlib import Path
-    import re
+from pathlib import Path
+import re
 
-    from pydantic import (BaseModel, Field, ValidationError,
-                          field_validator, model_validator)
-    from .errors import ConfigError
-
-except (ImportError, KeyboardInterrupt, Exception) as e:
-    print(f"Import Error : {e}")
+from pydantic import (BaseModel, Field, ValidationError,
+                      field_validator, model_validator)
+from .errors import ConfigError
 
 
 CONFIG_LINE_RE = re.compile(r"^\s*([A-Z_]+)\s*=\s*(.+?)\s*$")
@@ -19,7 +15,7 @@ class MazeConfig(BaseModel):
     use of pydantic for data validation & conversion through
     our own BaseModel class
     --------------------------------------------
-    class method here to build verification function 
+    class method here to build verification function
     that we want to run on our field verification by using the
     decorators field_validator and the cls class itself"""
 
@@ -34,6 +30,11 @@ class MazeConfig(BaseModel):
     algorithm: str = Field(default="dfs", alias="ALGORITHM")
     display: str = Field(default="mlx", alias="DISPLAY")
     animation: bool = Field(default=False, alias="ANIMATION")
+    show_path: bool = Field(default=True, alias="SHOW_PATH")
+    progress: bool = Field(default=True, alias="PROGRESS")
+    wall_color: str = Field(default="white", alias="WALL_COLOR")
+    path_color: str = Field(default="yellow", alias="PATH_COLOR")
+    pattern_color: str = Field(default="blue", alias="PATTERN_COLOR")
 
     @field_validator("entry", "exit", mode="before")
     @classmethod
@@ -53,8 +54,8 @@ class MazeConfig(BaseModel):
     def validate_algorithm(cls, value: str) -> str:
         """Validate selected maze algorithm."""
         value = value.lower()
-        if value not in {"dfs", "prim", "kruskal"}:
-            raise ValueError("algorithm must be dfs, prim, or kruskal")
+        if value not in {"dfs", "prim"}:
+            raise ValueError("algorithm must be dfs or prim")
         return value
 
     @field_validator("display")
@@ -64,6 +65,28 @@ class MazeConfig(BaseModel):
         value = value.lower()
         if value not in {"mlx", "ascii"}:
             raise ValueError("display must be mlx or ascii")
+        return value
+
+    @field_validator("wall_color", "path_color", "pattern_color")
+    @classmethod
+    def validate_color(cls, value: str) -> str:
+        """Validate supported display colours."""
+        value = value.lower()
+        valid_colors = {
+            "white",
+            "red",
+            "green",
+            "blue",
+            "yellow",
+            "cyan",
+            "magenta",
+            "gray",
+        }
+        if value not in valid_colors:
+            raise ValueError(
+                "color must be one of: "
+                + ", ".join(sorted(valid_colors))
+            )
         return value
 
     @model_validator(mode="after")

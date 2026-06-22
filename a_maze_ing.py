@@ -1,46 +1,97 @@
 #! /usr/bin/env python3
-try:
-    import sys
+import sys
+from collections.abc import Callable
+from dataclasses import dataclass
 
-    from mazegen.generator import MazeGenerator
-    from mazegen.writer import write_maze_file
-    from mazegen.solver import solve_shortest_path
-    from mazegen.config import parse_config_file, MazeConfig
-    from mazegen.renderer import render_ascii
+from mazegen.cell import Cell
+from mazegen.config import MazeConfig, parse_config_file
+from mazegen.generator import MazeGenerator
+from mazegen.renderer import render_ascii
+from mazegen.solver import solve_shortest_path
+from mazegen.writer import write_maze_file
 
-except (ImportError, KeyboardInterrupt, Exception) as e:
-    print(f"Import Error : {e}")
+COLOR_CHOICES = [
+    "white",
+    "red",
+    "green",
+    "blue",
+    "yellow",
+    "cyan",
+    "magenta",
+    "gray",
+]
 
 
-def check_arg(argument: list[str]) -> bool:
-    """param checker to assure the correct parsing"""
-    run_file: bool = (str(argument[0]) == "a_maze_ing.py")
-    config_file: bool = (str(argument[1]) == "config.txt")
+@dataclass
+class MazeRun:
+    """Generated maze data needed by writers and renderers."""
 
-    return run_file and config_file
+    generator: MazeGenerator
+    path: str
 
 
-def main() -> None:
-    """Main Generator => parseconfi"""
-    if len(sys.argv) != 2:
-        raise ValueError("Usage: python3 a_maze_ing.py config.txt")
-    if not check_arg(sys.argv):
-        raise ValueError("Use the correct ... a_maze_ing.py config.txt")
+def make_progress_callback() -> Callable[[int, int, str], None]:
+    """Build a stateful terminal progress callback."""
+    last_percent = -1
 
-    config: MazeConfig = parse_config_file(sys.argv[1])
+    def print_progress(done: int, total: int, label: str) -> None:
+        """Print a small terminal progress bar for maze generation."""
+        nonlocal last_percent
+
+        if total <= 0:
+            return
+
+        bar_width = 30
+        ratio = done / total
+        filled = int(bar_width * ratio)
+        bar = "#" * filled + "-" * (bar_width - filled)
+        percent = int(ratio * 100)
+
+        if percent == last_percent and done < total:
+            return
+
+        last_percent = percent
+        print(
+            f"\rGenerating with {label}: [{bar}] {percent:3d}%",
+            end="",
+            file=sys.stderr,
+        )
+
+        if done >= total:
+            print(file=sys.stderr)
+
+    return print_progress
+
+
+def build_maze(config: MazeConfig, seed_offset: int = 0) -> MazeRun:
+    """Generate, validate, solve, and write one maze."""
+    seed = config.seed
+    if seed is not None:
+        seed += seed_offset
 
     generator = MazeGenerator(
         width=config.width,
         height=config.height,
-        seed=config.seed)
+        seed=seed,
+    )
     generator.add_42_pattern()
-    
-    if config.algorithm == "dfs":
-        generator.generate_dfs()
-        if not generator.validate_maze():
-            raise ValueError("Generated maze has inconsistent walls")
-    else:
-        raise ValueError(f"Unsupported algo: {config.algorithm}")
+
+    progress_callback = make_progress_callback() if config.progress else None
+    generator.generate(
+        config.algorithm,
+        start_position=config.entry,
+        progress_callback=progress_callback,
+    )
+    if not config.perfect:
+        loop_count = max(1, generator.count_open_cells() // 20)
+        generator.add_extra_openings(loop_count)
+
+    if not generator.validate_maze():
+        raise ValueError("Generated maze has inconsistent walls")
+    if not generator.validate_connectivity(config.entry):
+        raise ValueError("Generated maze is not fully connected")
+    if generator.has_large_open_area():
+        raise ValueError("Generated maze contains a 3x3 open area")
 
     path = solve_shortest_path(
         generator.grid,
@@ -56,7 +107,98 @@ def main() -> None:
         path=path,
     )
 
-    print(render_ascii(generator.grid, config.entry, config.exit, path))
+    return MazeRun(generator=generator, path=path)
+
+
+def next_color(color: str) -> str:
+    """Return the next supported display colour."""
+    index = COLOR_CHOICES.index(color)
+    return COLOR_CHOICES[(index + 1) % len(COLOR_CHOICES)]
+
+
+def print_ascii_maze(
+    maze_run: MazeRun,
+    config: MazeConfig,
+    show_path: bool,
+    wall_color: str,
+) -> None:
+    """Print the current maze in ASCII mode."""
+    visible_path = maze_run.path if show_path else ""
+
+    print("\033[2J\033[H", end="")
+    print(render_ascii(
+        maze_run.generator.grid,
+        config.entry,
+        config.exit,
+        visible_path,
+        wall_color=wall_color,
+        path_color=config.path_color,
+        pattern_color=config.pattern_color,
+    ))
+    print()
+    print("Commands: [P] path  [R] regenerate  [C] wall color  [Q] quit")
+
+
+def run_ascii(config: MazeConfig, maze_run: MazeRun) -> None:
+    """Run the interactive ASCII display."""
+    show_path = config.show_path
+    wall_color = config.wall_color
+    regeneration_count = 0
+
+    while True:
+        print_ascii_maze(maze_run, config, show_path, wall_color)
+        try:
+            command = input("> ").strip().lower()
+        except EOFError:
+            print()
+            return
+
+        if command == "q":
+            return
+        if command == "p":
+            show_path = not show_path
+        elif command == "r":
+            regeneration_count += 1
+            maze_run = build_maze(config, regeneration_count)
+        elif command == "c":
+            wall_color = next_color(wall_color)
+        elif command:
+            print("Unknown command. Use P, R, C or Q.")
+
+
+def main() -> None:
+    """Main Generator => parseconfi"""
+    if len(sys.argv) != 2:
+        raise ValueError("Usage: python3 a_maze_ing.py config.txt")
+
+    config: MazeConfig = parse_config_file(sys.argv[1])
+
+    maze_run = build_maze(config)
+    if config.display == "mlx":
+        from mazegen.mlx_renderer import MlxRenderer
+
+        regeneration_count = 0
+
+        def regenerate() -> tuple[list[list[Cell]], str]:
+            nonlocal regeneration_count
+            regeneration_count += 1
+            new_run = build_maze(config, regeneration_count)
+            return new_run.generator.grid, new_run.path
+
+        renderer = MlxRenderer(
+            maze_run.generator.grid,
+            config.entry,
+            config.exit,
+            path=maze_run.path,
+            show_path=config.show_path,
+            wall_color=config.wall_color,
+            path_color=config.path_color,
+            pattern_color=config.pattern_color,
+            regenerate_callback=regenerate,
+        )
+        renderer.run()
+    else:
+        run_ascii(config, maze_run)
 
 
 if __name__ == "__main__":
@@ -64,7 +206,7 @@ if __name__ == "__main__":
         main()
 
     except KeyboardInterrupt:
-        print("\nProgram interrupted by user.")
+        print("\nProgram interrupted by user.", file=sys.stderr)
         sys.exit(130)
 
     except Exception as error:
