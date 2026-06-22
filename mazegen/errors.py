@@ -1,2 +1,3 @@
 class ConfigError(Exception):
-    """Raised for invalid config file"""
+    """Error handling for the configuration data
+    Raised for invalid config file of parsing """

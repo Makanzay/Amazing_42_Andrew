@@ -15,7 +15,13 @@ CONFIG_LINE_RE = re.compile(r"^\s*([A-Z_]+)\s*=\s*(.+?)\s*$")
 
 
 class MazeConfig(BaseModel):
-    """Validation maze configuration param"""
+    """Validation maze configuration param
+    use of pydantic for data validation & conversion through
+    our own BaseModel class
+    --------------------------------------------
+    class method here to build verification function 
+    that we want to run on our field verification by using the
+    decorators field_validator and the cls class itself"""
 
     width: int = Field(alias="WIDTH", gt=0, le=500)
     height: int = Field(alias="HEIGHT", gt=0, le=500)

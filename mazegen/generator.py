@@ -9,6 +9,7 @@ class MazeGenerator:
         self.grid: list[list[Cell]] = self._create_grid(width, height)
 
     def _create_grid(self, width: int, height: int) -> list[list[Cell]]:
+        """Built in method to generate our basic grid of cells"""
         return [[Cell(x, y) for x in range(width)] for y in range(height)]
 
     def remove_wall(self, current: Cell, neighbour: Cell) -> None:
@@ -32,6 +33,7 @@ class MazeGenerator:
             raise ValueError("Cells : are not adjacent")
 
     def get_cell(self, x: int, y: int) -> Cell:
+        """Use the coordinates to access the right cell of the maze"""
         if not (0 <= x < self.width):
             raise IndexError(f"x coordinate out of bounds: {x}")
 
@@ -41,7 +43,8 @@ class MazeGenerator:
         return self.grid[y][x]
 
     def get_neighbours(self, cell: Cell) -> list[Cell]:
-        """find all the neighbours of a cell"""
+        """find all the neighbours of a cell
+        return it as a list of max four neighbours"""
         x: int = cell.x
         y: int = cell.y
 

@@ -5,6 +5,13 @@ from dataclasses import dataclass
 
 @dataclass
 class Cell:
+    """representation of the cell of our maze
+    each wall and their position
+    -----------------------------------------
+    True -> closed wall
+    False -> open wall
+    (x,y) -> mathematical represention of the position
+    """
     x: int
     y: int
 
@@ -16,7 +23,11 @@ class Cell:
     visited: bool = False
 
     def to_hexa(self) -> str:
-        """converter to Hexadecimal"""
+        """converter to Hexadecimal
+        uses a 4bit data to represent wall state
+        through bitwise and return an Hexadecimal
+        output
+        """
         res = 0
 
         if self.north:
