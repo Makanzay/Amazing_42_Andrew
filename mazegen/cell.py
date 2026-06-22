@@ -22,6 +22,8 @@ class Cell:
 
     visited: bool = False
 
+    blocked: bool = False
+
     def to_hexa(self) -> str:
         """converter to Hexadecimal
         uses a 4bit data to represent wall state

@@ -72,13 +72,16 @@ class MazeGenerator:
         return [
             neighbour
             for neighbour in self.get_neighbours(cell)
-            if not neighbour.visited
+            if not neighbour.visited and not neighbour.blocked
         ]
 
     def generate_dfs(self) -> None:
         """Generate a perfect maze using iterative dfs backtracking
         allow use to avoid recursive error on wide maze"""
         start = self.get_cell(0, 0)
+
+        if start.blocked:
+            raise ValueError("Cant Start here cell is blocked")
         start.visited = True
 
         stack: list[Cell] = [start]
@@ -94,3 +97,5 @@ class MazeGenerator:
                 stack.append(neighbour)
             else:
                 stack.pop()
+    
+    def validate_maze
