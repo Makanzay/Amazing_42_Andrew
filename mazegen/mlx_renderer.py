@@ -3,7 +3,7 @@
 import signal
 from collections.abc import Callable
 
-from mlx import Mlx
+from mlx import Mlx  # type: ignore[import-untyped]
 from .cell import Cell
 from .renderer import path_to_positions
 

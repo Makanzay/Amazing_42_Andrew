@@ -31,7 +31,6 @@ class MazeConfig(BaseModel):
     display: str = Field(default="mlx", alias="DISPLAY")
     animation: bool = Field(default=False, alias="ANIMATION")
     show_path: bool = Field(default=True, alias="SHOW_PATH")
-    progress: bool = Field(default=True, alias="PROGRESS")
     wall_color: str = Field(default="white", alias="WALL_COLOR")
     path_color: str = Field(default="yellow", alias="PATH_COLOR")
     pattern_color: str = Field(default="blue", alias="PATTERN_COLOR")

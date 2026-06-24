@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass
 
 from mazegen.cell import Cell
@@ -36,39 +35,6 @@ def clear_terminal() -> None:
     sys.stdout.flush()
 
 
-def make_progress_callback() -> Callable[[int, int, str], None]:
-    """Build a stateful terminal progress callback."""
-    last_percent = -1
-
-    def print_progress(done: int, total: int, label: str) -> None:
-        """Print a small terminal progress bar for maze generation."""
-        nonlocal last_percent
-
-        if total <= 0:
-            return
-
-        bar_width = 30
-        ratio = done / total
-        filled = int(bar_width * ratio)
-        bar = "#" * filled + "-" * (bar_width - filled)
-        percent = int(ratio * 100)
-
-        if percent == last_percent and done < total:
-            return
-
-        last_percent = percent
-        print(
-            f"\rGenerating with {label}: [{bar}] {percent:3d}%",
-            end="",
-            file=sys.stderr,
-        )
-
-        if done >= total:
-            print(file=sys.stderr)
-
-    return print_progress
-
-
 def build_maze(config: MazeConfig, seed_offset: int = 0) -> MazeRun:
     """Generate, validate, solve, and write one maze."""
     clear_terminal()
@@ -84,11 +50,9 @@ def build_maze(config: MazeConfig, seed_offset: int = 0) -> MazeRun:
     )
     generator.add_42_pattern()
 
-    progress_callback = make_progress_callback() if config.progress else None
     generator.generate(
         config.algorithm,
         start_position=config.entry,
-        progress_callback=progress_callback,
     )
     if not config.perfect:
         loop_count = max(1, generator.count_open_cells() // 20)
