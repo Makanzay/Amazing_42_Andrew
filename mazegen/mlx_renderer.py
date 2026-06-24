@@ -3,7 +3,7 @@
 import signal
 from collections.abc import Callable
 
-from mlx import Mlx  # type: ignore[import-untyped]
+from mlx import Mlx
 from .cell import Cell
 from .renderer import path_to_positions
 
@@ -85,10 +85,10 @@ class MlxRenderer:
             raise RuntimeError("mlx_new_window failed")
 
         self.img_ptr = self.mlx_loader.mlx_new_image(
-                self.mlx_ptr,
-                self.width,
-                self.height,
-            )
+            self.mlx_ptr,
+            self.width,
+            self.height,
+        )
 
         if not self.img_ptr:
             raise RuntimeError("mlx_new_image failed")
@@ -130,39 +130,13 @@ class MlxRenderer:
                 screen_x = x_idx * CELL_SIZE
                 screen_y = y_idx * CELL_SIZE
 
-                if getattr(cell, "blocked", False):
-                    bg_color = self.get_color(
-                        self.pattern_color_name, COLOR_BLOCKED)
-                elif (cell.x, cell.y) == self.entry:
-                    bg_color = COLOR_START
-                elif (cell.x, cell.y) == self.exit:
-                    bg_color = COLOR_EXIT
-                elif self.is_path_cell(cell.x, cell.y):
-                    bg_color = self.get_color(self.path_color_name, COLOR_PATH)
-                else:
-                    bg_color = COLOR_FLOOR
-
                 self.draw_cell_background(
-                    screen_x, screen_y, CELL_SIZE, bg_color)
-
-                if cell.north:
-                    self.draw_horizontal_line(
-                        screen_x, screen_x + CELL_SIZE, screen_y,
-                        self.get_color(self.wall_color_name, COLOR_WALL))
-                if cell.east:
-                    self.draw_vertical_line(
-                        screen_x + CELL_SIZE, screen_y,
-                        screen_y + CELL_SIZE,
-                        self.get_color(self.wall_color_name, COLOR_WALL))
-                if cell.south:
-                    self.draw_horizontal_line(
-                        screen_x, screen_x + CELL_SIZE,
-                        screen_y + CELL_SIZE,
-                        self.get_color(self.wall_color_name, COLOR_WALL))
-                if cell.west:
-                    self.draw_vertical_line(
-                        screen_x, screen_y, screen_y + CELL_SIZE,
-                        self.get_color(self.wall_color_name, COLOR_WALL))
+                    screen_x,
+                    screen_y,
+                    CELL_SIZE,
+                    self.get_cell_background(cell),
+                )
+                self.draw_cell_walls(cell, screen_x, screen_y)
 
         self.sync_image()
         self.mlx_loader.mlx_put_image_to_window(
@@ -246,6 +220,41 @@ class MlxRenderer:
     def get_color(self, color_name: str, default: int) -> int:
         """Return an MLX colour value from a config name."""
         return MLX_COLORS.get(color_name, default)
+
+    def get_cell_background(self, cell: Cell) -> int:
+        """Return the background colour for one cell."""
+        if cell.blocked:
+            return self.get_color(self.pattern_color_name, COLOR_BLOCKED)
+        if (cell.x, cell.y) == self.entry:
+            return COLOR_START
+        if (cell.x, cell.y) == self.exit:
+            return COLOR_EXIT
+        if self.is_path_cell(cell.x, cell.y):
+            return self.get_color(self.path_color_name, COLOR_PATH)
+        return COLOR_FLOOR
+
+    def draw_cell_walls(self, cell: Cell, x: int, y: int) -> None:
+        """Draw every closed wall for one rendered cell."""
+        wall_color = self.get_color(self.wall_color_name, COLOR_WALL)
+
+        if cell.north:
+            self.draw_horizontal_line(x, x + CELL_SIZE, y, wall_color)
+        if cell.east:
+            self.draw_vertical_line(
+                x + CELL_SIZE,
+                y,
+                y + CELL_SIZE,
+                wall_color,
+            )
+        if cell.south:
+            self.draw_horizontal_line(
+                x,
+                x + CELL_SIZE,
+                y + CELL_SIZE,
+                wall_color,
+            )
+        if cell.west:
+            self.draw_vertical_line(x, y, y + CELL_SIZE, wall_color)
 
     def is_path_cell(self, x: int, y: int) -> bool:
         """Return True when the cell belongs to the visible solution path."""

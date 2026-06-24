@@ -1,10 +1,7 @@
 import random
 import sys
-from collections.abc import Callable
 
 from .cell import Cell
-
-ProgressCallback = Callable[[int, int, str], None]
 
 PATTERN_42 = [
     "#   #  ### ",
@@ -13,6 +10,14 @@ PATTERN_42 = [
     "    #   #  ",
     "    # #####",
 ]
+
+Direction = tuple[str, int, int, str]
+DIRECTIONS: tuple[Direction, ...] = (
+    ("north", 0, -1, "south"),
+    ("east", 1, 0, "west"),
+    ("south", 0, 1, "north"),
+    ("west", -1, 0, "east"),
+)
 
 
 class MazeGenerator:
@@ -33,18 +38,15 @@ class MazeGenerator:
         """Reset non-blocked cells before running a generation algorithm."""
         for row in self.grid:
             for cell in row:
-                if cell.blocked:
-                    cell.north = True
-                    cell.east = True
-                    cell.south = True
-                    cell.west = True
-                    cell.visited = True
-                else:
-                    cell.north = True
-                    cell.east = True
-                    cell.south = True
-                    cell.west = True
-                    cell.visited = False
+                self.close_cell(cell)
+                cell.visited = cell.blocked
+
+    def close_cell(self, cell: Cell) -> None:
+        """Close every wall of one cell."""
+        cell.north = True
+        cell.east = True
+        cell.south = True
+        cell.west = True
 
     def count_open_cells(self) -> int:
         """Return the number of non-blocked cells in the maze."""
@@ -55,36 +57,9 @@ class MazeGenerator:
             if not cell.blocked
         )
 
-    def _notify_progress(
-        self,
-        progress_callback: ProgressCallback | None,
-        done: int,
-        total: int,
-        label: str,
-    ) -> None:
-        """Call a progress callback when one was supplied."""
-        if progress_callback is not None:
-            progress_callback(done, total, label)
-
     def remove_wall(self, current: Cell, neighbour: Cell) -> None:
         """Remove the wall between two adjacent cells."""
-        dx = neighbour.x - current.x
-        dy = neighbour.y - current.y
-
-        if dx == 1 and dy == 0:
-            current.east = False
-            neighbour.west = False
-        elif dx == -1 and dy == 0:
-            current.west = False
-            neighbour.east = False
-        elif dx == 0 and dy == 1:
-            current.south = False
-            neighbour.north = False
-        elif dx == 0 and dy == -1:
-            current.north = False
-            neighbour.south = False
-        else:
-            raise ValueError("Cells : are not adjacent")
+        self._set_wall(current, neighbour, closed=False)
 
     def get_cell(self, x: int, y: int) -> Cell:
         """Use the coordinates to access the right cell of the maze"""
@@ -99,24 +74,19 @@ class MazeGenerator:
     def get_neighbours(self, cell: Cell) -> list[Cell]:
         """find all the neighbours of a cell
         return it as a list of max four neighbours"""
-        x: int = cell.x
-        y: int = cell.y
-
         neighbours: list[Cell] = []
 
-        if y > 0:
-            neighbours.append(self.get_cell(x, y - 1))
-
-        if x < self.width - 1:
-            neighbours.append(self.get_cell(x + 1, y))
-
-        if y < self.height - 1:
-            neighbours.append(self.get_cell(x, y + 1))
-
-        if x > 0:
-            neighbours.append(self.get_cell(x - 1, y))
+        for _, dx, dy, _ in DIRECTIONS:
+            x = cell.x + dx
+            y = cell.y + dy
+            if self.is_inside(x, y):
+                neighbours.append(self.get_cell(x, y))
 
         return neighbours
+
+    def is_inside(self, x: int, y: int) -> bool:
+        """Return True when coordinates are inside the maze."""
+        return 0 <= x < self.width and 0 <= y < self.height
 
     def get_unvisited_neighbours(self, cell: Cell) -> list[Cell]:
         """Neighbours that have not been visited yet."""
@@ -129,7 +99,6 @@ class MazeGenerator:
     def generate_dfs(
         self,
         start_position: tuple[int, int] = (0, 0),
-        progress_callback: ProgressCallback | None = None,
     ) -> None:
         """Generate a perfect maze using iterative dfs backtracking
         allow use to avoid recursive error on wide maze"""
@@ -141,10 +110,6 @@ class MazeGenerator:
         start.visited = True
 
         stack: list[Cell] = [start]
-        visited_count = 1
-        total_cells = self.count_open_cells()
-        self._notify_progress(
-            progress_callback, visited_count, total_cells, "dfs")
 
         while stack:
             current = stack[-1]
@@ -154,17 +119,13 @@ class MazeGenerator:
                 neighbour = self.random.choice(unvisited)
                 self.remove_wall(current, neighbour)
                 neighbour.visited = True
-                visited_count += 1
                 stack.append(neighbour)
-                self._notify_progress(
-                    progress_callback, visited_count, total_cells, "dfs")
             else:
                 stack.pop()
 
     def generate_prim(
         self,
         start_position: tuple[int, int] = (0, 0),
-        progress_callback: ProgressCallback | None = None,
     ) -> None:
         """Generate a perfect maze using randomized Prim's algorithm."""
         self.reset_walls()
@@ -174,15 +135,10 @@ class MazeGenerator:
             raise ValueError("Cant Start here cell is blocked")
 
         start.visited = True
-        visited_count = 1
-        total_cells = self.count_open_cells()
         frontiers: list[tuple[Cell, Cell]] = []
 
         for neighbour in self.get_unvisited_neighbours(start):
             frontiers.append((start, neighbour))
-
-        self._notify_progress(
-            progress_callback, visited_count, total_cells, "prim")
 
         while frontiers:
             index = self.random.randrange(len(frontiers))
@@ -193,9 +149,6 @@ class MazeGenerator:
 
             self.remove_wall(current, neighbour)
             neighbour.visited = True
-            visited_count += 1
-            self._notify_progress(
-                progress_callback, visited_count, total_cells, "prim")
 
             for next_neighbour in self.get_unvisited_neighbours(neighbour):
                 frontiers.append((neighbour, next_neighbour))
@@ -204,13 +157,12 @@ class MazeGenerator:
         self,
         algorithm: str,
         start_position: tuple[int, int] = (0, 0),
-        progress_callback: ProgressCallback | None = None,
     ) -> None:
         """Generate a maze using the selected algorithm."""
         if algorithm == "dfs":
-            self.generate_dfs(start_position, progress_callback)
+            self.generate_dfs(start_position)
         elif algorithm == "prim":
-            self.generate_prim(start_position, progress_callback)
+            self.generate_prim(start_position)
         else:
             raise ValueError(f"Unsupported algo: {algorithm}")
 
@@ -254,23 +206,20 @@ class MazeGenerator:
 
     def close_wall(self, current: Cell, neighbour: Cell) -> None:
         """Close the wall between two adjacent cells."""
+        self._set_wall(current, neighbour, closed=True)
+
+    def _set_wall(self, current: Cell, neighbour: Cell, closed: bool) -> None:
+        """Set the shared wall between two adjacent cells."""
         dx = neighbour.x - current.x
         dy = neighbour.y - current.y
 
-        if dx == 1 and dy == 0:
-            current.east = True
-            neighbour.west = True
-        elif dx == -1 and dy == 0:
-            current.west = True
-            neighbour.east = True
-        elif dx == 0 and dy == 1:
-            current.south = True
-            neighbour.north = True
-        elif dx == 0 and dy == -1:
-            current.north = True
-            neighbour.south = True
-        else:
-            raise ValueError("Cells : are not adjacent")
+        for current_wall, wall_dx, wall_dy, neighbour_wall in DIRECTIONS:
+            if dx == wall_dx and dy == wall_dy:
+                setattr(current, current_wall, closed)
+                setattr(neighbour, neighbour_wall, closed)
+                return
+
+        raise ValueError("Cells : are not adjacent")
 
     def validate_maze(self) -> bool:
         """Check wall consistency between neighbour cells."""
@@ -309,26 +258,22 @@ class MazeGenerator:
             x = cell.x
             y = cell.y
 
-            if not cell.north and y > 0:
-                neighbour = self.get_cell(x, y - 1)
-                if not neighbour.blocked and (x, y - 1) not in visited:
-                    visited.add((x, y - 1))
-                    stack.append(neighbour)
-            if not cell.east and x < self.width - 1:
-                neighbour = self.get_cell(x + 1, y)
-                if not neighbour.blocked and (x + 1, y) not in visited:
-                    visited.add((x + 1, y))
-                    stack.append(neighbour)
-            if not cell.south and y < self.height - 1:
-                neighbour = self.get_cell(x, y + 1)
-                if not neighbour.blocked and (x, y + 1) not in visited:
-                    visited.add((x, y + 1))
-                    stack.append(neighbour)
-            if not cell.west and x > 0:
-                neighbour = self.get_cell(x - 1, y)
-                if not neighbour.blocked and (x - 1, y) not in visited:
-                    visited.add((x - 1, y))
-                    stack.append(neighbour)
+            for wall, dx, dy, _ in DIRECTIONS:
+                next_x = x + dx
+                next_y = y + dy
+                position = (next_x, next_y)
+
+                if getattr(cell, wall) or not self.is_inside(next_x, next_y):
+                    continue
+                if position in visited:
+                    continue
+
+                neighbour = self.get_cell(next_x, next_y)
+                if neighbour.blocked:
+                    continue
+
+                visited.add(position)
+                stack.append(neighbour)
 
         return len(visited) == self.count_open_cells()
 
@@ -364,10 +309,7 @@ class MazeGenerator:
         for x, y in positions:
             cell = self.get_cell(x, y)
             cell.blocked = True
-            cell.north = True
-            cell.east = True
-            cell.south = True
-            cell.west = True
+            self.close_cell(cell)
             cell.visited = True
 
     def add_test_block(self) -> None:

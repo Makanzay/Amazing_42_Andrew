@@ -8,6 +8,18 @@ from .errors import ConfigError
 
 
 CONFIG_LINE_RE = re.compile(r"^\s*([A-Z_]+)\s*=\s*(.+?)\s*$")
+VALID_ALGORITHMS = {"dfs", "prim"}
+VALID_DISPLAYS = {"mlx", "ascii"}
+VALID_COLORS = {
+    "white",
+    "red",
+    "green",
+    "blue",
+    "yellow",
+    "cyan",
+    "magenta",
+    "gray",
+}
 
 
 class MazeConfig(BaseModel):
@@ -53,7 +65,7 @@ class MazeConfig(BaseModel):
     def validate_algorithm(cls, value: str) -> str:
         """Validate selected maze algorithm."""
         value = value.lower()
-        if value not in {"dfs", "prim"}:
+        if value not in VALID_ALGORITHMS:
             raise ValueError("algorithm must be dfs or prim")
         return value
 
@@ -62,7 +74,7 @@ class MazeConfig(BaseModel):
     def validate_display(cls, value: str) -> str:
         """Validate selected display mode."""
         value = value.lower()
-        if value not in {"mlx", "ascii"}:
+        if value not in VALID_DISPLAYS:
             raise ValueError("display must be mlx or ascii")
         return value
 
@@ -71,20 +83,10 @@ class MazeConfig(BaseModel):
     def validate_color(cls, value: str) -> str:
         """Validate supported display colours."""
         value = value.lower()
-        valid_colors = {
-            "white",
-            "red",
-            "green",
-            "blue",
-            "yellow",
-            "cyan",
-            "magenta",
-            "gray",
-        }
-        if value not in valid_colors:
+        if value not in VALID_COLORS:
             raise ValueError(
                 "color must be one of: "
-                + ", ".join(sorted(valid_colors))
+                + ", ".join(sorted(VALID_COLORS))
             )
         return value
 

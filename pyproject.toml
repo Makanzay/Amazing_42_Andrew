@@ -22,3 +22,6 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["mazegen*"]
+
+[tool.mypy]
+mypy_path = "typings"
