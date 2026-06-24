@@ -283,6 +283,54 @@ is launched from an IDE output panel that does not interpret ANSI escape codes,
 old mazes may still appear; use a real terminal or the VS Code integrated
 terminal in that case.
 
+## ASCII Waiting Animation
+
+In ASCII mode, the program shows a rotating donut before the first maze appears.
+This is handled by `mazegen/ascii_intro.py`.
+
+The animation is not a loading bar. It is a small terminal animation that keeps
+redrawing frames while the first maze is being generated. The frame is produced
+from simple 3D math: points on a torus are rotated, projected onto a 2D terminal
+grid, then drawn with brighter or darker ASCII characters depending on their
+orientation.
+
+The important function is `run_with_ascii_donut()`:
+
+```python
+maze_run = run_with_ascii_donut(
+    lambda: build_maze(config),
+    minimum_duration=4.5,
+)
+```
+
+The idea is:
+
+1. The maze generation function is passed as `action`.
+2. `run_with_ascii_donut()` starts this action in a separate `threading.Thread`.
+3. The main thread stays free to draw the donut frames.
+4. Each frame clears the terminal with `\033[2J\033[3J\033[H`, draws the donut,
+   prints `Generating maze...`, then sleeps for a tiny delay.
+5. The animation loop continues while the generation thread is still alive.
+6. It also respects `minimum_duration`, so even a fast generation keeps the intro
+   visible long enough to be seen.
+7. When both conditions are done, the worker thread is joined and the generated
+   `MazeRun` is returned.
+
+In other words, the main thread says: "I will keep animating until the maze is
+ready, and at least 4.5 seconds have passed."
+
+The function also stores any exception raised by the generation thread. After the
+animation stops, that exception is raised again in the main thread, so error
+handling in `a_maze_ing.py` still works normally.
+
+The donut only runs when `sys.stdout.isatty()` is true. That means it is shown in
+a real terminal, but skipped when the program is piped, redirected, or executed
+by automated tests. This keeps `make test` and scripted validation fast and
+predictable.
+
+The intro is only used for the first ASCII generation. Regenerating with `R`
+builds and displays a new maze directly, without replaying the waiting animation.
+
 ## Output File
 
 The output file contains one hexadecimal digit per cell. Bits encode closed
