@@ -20,6 +20,8 @@ COLOR_CHOICES = [
     "gray",
 ]
 
+ASCII_COMMANDS = "Commands: [P] path  [R] regenerate  [C] wall color  [Q] quit"
+
 
 @dataclass
 class MazeRun:
@@ -137,7 +139,15 @@ def print_ascii_maze(
         pattern_color=config.pattern_color,
     ))
     print()
-    print("Commands: [P] path  [R] regenerate  [C] wall color  [Q] quit")
+    print_ascii_commands()
+
+
+def print_ascii_commands() -> None:
+    """Print the interactive commands inside an ASCII frame."""
+    border = "+" + "-" * (len(ASCII_COMMANDS) + 2) + "+"
+    print(border)
+    print(f"| {ASCII_COMMANDS} |")
+    print(border)
 
 
 def run_ascii(config: MazeConfig, maze_run: MazeRun) -> None:
@@ -199,11 +209,16 @@ def main() -> None:
         raise ValueError("Usage: python3 a_maze_ing.py config.txt")
 
     config: MazeConfig = parse_config_file(sys.argv[1])
-
-    maze_run = build_maze(config)
     if config.display == "mlx":
+        maze_run = build_maze(config)
         run_mlx(config, maze_run)
     else:
+        from mazegen.ascii_intro import run_with_ascii_donut
+
+        maze_run = run_with_ascii_donut(
+            lambda: build_maze(config),
+            minimum_duration=4.5,
+        )
         run_ascii(config, maze_run)
 
 

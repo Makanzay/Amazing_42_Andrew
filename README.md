@@ -350,4 +350,5 @@ test planning. All generated changes were reviewed and tested locally.
 - Pydantic documentation: https://docs.pydantic.dev/
 - Maze generation overview: https://en.wikipedia.org/wiki/Maze_generation_algorithm
 - Prim's algorithm: https://en.wikipedia.org/wiki/Prim%27s_algorithm
+- ASCII spinning donut inspiration: https://www.asciiart.eu/animations/ascii-spinning-donut
 - 42 MiniLibX documentation supplied with the local `mlx` wheel
