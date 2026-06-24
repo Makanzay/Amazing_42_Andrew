@@ -6,7 +6,7 @@ CONFIG ?= config.txt
 
 install:
 	python3 -m venv .venv
-	$(PIP) install --upgrade pip
+	$(PIP) install --upgrade pip setuptools wheel
 	$(PIP) install -e ".[dev]"
 	$(PIP) install ./mlx-2.2-py3-none-any.whl
 
@@ -33,3 +33,4 @@ test:
 
 build:
 	$(PYTHON) -m build --no-isolation
+	cp dist/mazegen-*.whl .

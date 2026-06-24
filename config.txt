@@ -8,7 +8,6 @@ SEED=42
 ALGORITHM=dfs
 DISPLAY=ascii
 
-ANIMATION=False
 SHOW_PATH=True
 WALL_COLOR=white
 PATH_COLOR=yellow

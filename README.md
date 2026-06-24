@@ -115,6 +115,14 @@ Equivalent direct command:
 Use `.venv/bin/python` or activate the virtual environment. A system `python3`
 may import a different package named `mlx`.
 
+### Local Type Stubs
+
+The `typings/` directory contains a local mypy stub for the MiniLibX `mlx`
+package. The wheel used by this project works at runtime, but it does not ship
+Python type information. The stub in `typings/mlx/__init__.pyi` describes only
+the `Mlx` methods used by this codebase, so `make lint` and `make lint-strict`
+can type-check the project without ignoring the `mlx` import.
+
 Other useful commands:
 
 ```bash
@@ -146,7 +154,6 @@ Additional keys supported by this implementation:
 SEED=42
 ALGORITHM=dfs
 DISPLAY=mlx
-ANIMATION=False
 SHOW_PATH=True
 WALL_COLOR=white
 PATH_COLOR=yellow
@@ -159,21 +166,95 @@ and `mlx`. Supported colours are `white`, `red`, `green`, `blue`, `yellow`,
 
 ## Algorithms
 
-The default algorithm is iterative depth-first search with backtracking. It is
-simple, deterministic with a seed, avoids recursion depth issues, and naturally
+This project uses two algorithms to build mazes, and one algorithm to solve
+them.
+
+### DFS Generation
+
+DFS means depth-first search. Imagine a child walking in a maze with a pencil:
+they keep walking forward as long as they find a new place. When they get stuck,
+they go back to the last place where another direction was possible, then try
+again.
+
+In this project, DFS starts from the entry cell, chooses a random unvisited
+neighbour, opens the wall between both cells, and continues until every available
+cell has been visited. The implementation is iterative, so it uses a Python list
+as a stack instead of recursive function calls.
+
+```python
+from mazegen import MazeGenerator
+
+generator = MazeGenerator(width=20, height=15, seed=42)
+generator.add_42_pattern()
+generator.generate("dfs", start_position=(0, 0))
+
+grid = generator.grid
+```
+
+DFS is the default because it is simple, reproducible with a seed, and naturally
 creates a perfect maze over all non-blocked cells.
 
-The bonus algorithm is randomized Prim. It also creates a spanning tree over the
-available cells, but produces a different maze style with more evenly spread
-branches.
+### Prim Generation
 
-The visible `42` pattern is made from fully closed blocked cells. If the maze is
-too small for the pattern, the program prints a clear message and continues
-without it.
+Prim starts from one cell too, but it thinks more like this: "I have a growing
+island of visited cells. Around my island, there are frontier walls. I randomly
+choose one frontier wall, open it, and add the new cell to my island."
+
+In this project, randomized Prim keeps a list of frontier edges. Each edge links
+an already visited cell to an unvisited neighbour. The algorithm picks one edge
+at random, opens that wall, marks the neighbour as visited, then adds that
+neighbour's new frontier edges.
+
+```python
+from mazegen import MazeGenerator
+
+generator = MazeGenerator(width=20, height=15, seed=42)
+generator.add_42_pattern()
+generator.generate("prim", start_position=(0, 0))
+
+grid = generator.grid
+```
+
+Prim also creates a perfect maze when `PERFECT=True`, but the result has a
+different style: branches are usually more evenly spread than with DFS.
+
+### BFS Solving
+
+BFS means breadth-first search. It is used here to find the shortest path from
+the entry to the exit. Imagine dropping water at the entrance: the water spreads
+one step at a time in every possible direction. The first time it reaches the
+exit, that route is the shortest one.
+
+In this project, BFS stores cells in a queue. Each item keeps both the current
+cell and the path used to reach it. When the exit is found, the solver returns a
+string made of `N`, `E`, `S`, and `W`.
+
+```python
+from mazegen import MazeGenerator, solve_shortest_path
+
+generator = MazeGenerator(width=20, height=15, seed=42)
+generator.add_42_pattern()
+generator.generate("dfs", start_position=(0, 0))
+
+path = solve_shortest_path(
+    generator.grid,
+    entry=(0, 0),
+    exit_=(19, 14),
+)
+
+print(path)
+```
+
+The returned path is also written to the output file after the maze data, entry,
+and exit coordinates.
 
 When `PERFECT=False`, the program first generates a connected maze, then opens a
 small number of additional internal walls to create loops. Each extra opening is
 checked so the maze still avoids fully open 3x3 areas.
+
+The visible `42` pattern is made from fully closed blocked cells. If the maze is
+too small for the pattern, the program prints a clear message and continues
+without it.
 
 ## Display
 

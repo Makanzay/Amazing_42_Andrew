@@ -41,7 +41,6 @@ class MazeConfig(BaseModel):
     seed: int | None = Field(default=None, alias="SEED")
     algorithm: str = Field(default="dfs", alias="ALGORITHM")
     display: str = Field(default="mlx", alias="DISPLAY")
-    animation: bool = Field(default=False, alias="ANIMATION")
     show_path: bool = Field(default=True, alias="SHOW_PATH")
     wall_color: str = Field(default="white", alias="WALL_COLOR")
     path_color: str = Field(default="yellow", alias="PATH_COLOR")
